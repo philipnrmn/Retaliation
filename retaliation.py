@@ -80,8 +80,7 @@ import json
 import urllib2
 import base64
 
-import usb.core
-import usb.util
+import hid
 
 ##########################  CONFIG   #########################
 
@@ -177,6 +176,27 @@ def usage():
     print "             to test targeting of chris as defined in your command set."
     print ""
 
+"""Similar interface to a pyusb device but uses HIDAPI instead"""
+class HidDevice():
+    def __init__(self, device):
+        self.device = device
+
+    def ctrl_transfer(self, *args):
+        bytes_ = args[-1][:2]
+        self.device.write(bytes_)
+        pass
+
+    """AFAIK, this doesn't need to do anything"""
+    def set_configuration(*args):
+        pass
+
+def hid_find(**kwargs):
+    device = hid.device()
+    try:
+        device.open(kwargs['idVendor'], kwargs['idProduct'])
+    except IOError, e:
+        return None
+    return HidDevice(device)
 
 def setup_usb():
     # Tested only with the Cheeky Dream Thunder
@@ -184,10 +204,10 @@ def setup_usb():
     global DEVICE 
     global DEVICE_TYPE
 
-    DEVICE = usb.core.find(idVendor=0x2123, idProduct=0x1010)
+    DEVICE = hid_find(idVendor=0x2123, idProduct=0x1010)
 
     if DEVICE is None:
-        DEVICE = usb.core.find(idVendor=0x0a81, idProduct=0x0701)
+        DEVICE = hid_find(idVendor=0x0a81, idProduct=0x0701)
         if DEVICE is None:
             raise ValueError('Missile device not found')
         else:
